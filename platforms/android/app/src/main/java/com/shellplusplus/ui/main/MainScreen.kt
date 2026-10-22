@@ -211,7 +211,10 @@ fun MainScreen(
                                     showTopBar()
                                 }
                             },
-                            onPinchIn = {
+                            onTwoFingerSwipeUp = {
+                                showTopBar()
+                            },
+                            onTwoFingerLongPress = {
                                 switcherIndex = null
                                 showingLauncher = true
                                 showTopBar()

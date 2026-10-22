@@ -8,7 +8,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.MediaStore
+import android.os.Handler
+import android.os.Looper
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
@@ -42,7 +45,8 @@ fun AppWebView(
     onTwoFingerTouch: () -> Unit = {},
     onShowSwitcher: () -> Unit = {},
     onTwoFingerSwipeDown: () -> Unit = {},
-    onPinchIn: () -> Unit = {},
+    onTwoFingerSwipeUp: () -> Unit = {},
+    onTwoFingerLongPress: () -> Unit = {},
     touchEnabled: Boolean = true
 ) {
     var webView by remember { mutableStateOf<WebView?>(null) }
@@ -51,7 +55,8 @@ fun AppWebView(
     val currentOnTwoFingerTouch by rememberUpdatedState(onTwoFingerTouch)
     val currentOnShowSwitcher by rememberUpdatedState(onShowSwitcher)
     val currentOnTwoFingerSwipeDown by rememberUpdatedState(onTwoFingerSwipeDown)
-    val currentOnPinchIn by rememberUpdatedState(onPinchIn)
+    val currentOnTwoFingerSwipeUp by rememberUpdatedState(onTwoFingerSwipeUp)
+    val currentOnTwoFingerLongPress by rememberUpdatedState(onTwoFingerLongPress)
     val currentTouchEnabled by rememberUpdatedState(touchEnabled)
     val context = LocalContext.current
     val chooserBridge = remember { WebChooserBridge() }
@@ -258,16 +263,41 @@ fun AppWebView(
                 isHorizontalScrollBarEnabled = true
                 overScrollMode = android.view.View.OVER_SCROLL_IF_CONTENT_SCROLLS
 
-                val swipeSlop = 80f * ctx.resources.displayMetrics.density
+                val density = ctx.resources.displayMetrics.density
+                val swipeSlop = 80f * density
+                val tapSlop = 25f * density
+                val longPressTimeoutMs = ViewConfiguration.getLongPressTimeout().toLong()
+                val gestureHandler = Handler(Looper.getMainLooper())
                 var trackingSwipe = false
                 var swipeIsPinch = false
                 var gestureMode = 0
+                var shellGestureFired = false
+                var multiTouchSession = false
+                var suppressUntilUp = false
                 var startX0 = 0f
                 var startY0 = 0f
                 var startX1 = 0f
                 var startY1 = 0f
                 var startSpan = 1f
-                setOnTouchListener { _, event ->
+                var longPressArmed = false
+                val longPressRunnable = Runnable {
+                    if (longPressArmed && multiTouchSession && !swipeIsPinch && !shellGestureFired) {
+                        longPressArmed = false
+                        shellGestureFired = true
+                        gestureMode = 4
+                        suppressUntilUp = true
+                        currentOnTwoFingerLongPress()
+                        val now = android.os.SystemClock.uptimeMillis()
+                        val cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
+                        this.onTouchEvent(cancel)
+                        cancel.recycle()
+                    }
+                }
+                fun cancelLongPress() {
+                    longPressArmed = false
+                    gestureHandler.removeCallbacks(longPressRunnable)
+                }
+                setOnTouchListener { view, event ->
                     when (event.actionMasked) {
                         MotionEvent.ACTION_POINTER_DOWN -> {
                             if (event.pointerCount == 2) {
@@ -280,13 +310,20 @@ fun AppWebView(
                                 trackingSwipe = true
                                 swipeIsPinch = false
                                 gestureMode = 0
+                                shellGestureFired = false
+                                multiTouchSession = true
+                                suppressUntilUp = false
+                                longPressArmed = true
+                                gestureHandler.removeCallbacks(longPressRunnable)
+                                gestureHandler.postDelayed(longPressRunnable, longPressTimeoutMs)
                             } else {
                                 trackingSwipe = false
                                 swipeIsPinch = true
+                                cancelLongPress()
                             }
                         }
                         MotionEvent.ACTION_MOVE -> {
-                            if (trackingSwipe && !swipeIsPinch && event.pointerCount == 2 && gestureMode != 2 && gestureMode != 3) {
+                            if (trackingSwipe && !swipeIsPinch && event.pointerCount == 2 && gestureMode == 0) {
                                 val x0 = event.getX(0)
                                 val y0 = event.getY(0)
                                 val x1 = event.getX(1)
@@ -295,21 +332,34 @@ fun AppWebView(
                                 val dx = (x0 + x1) / 2f - (startX0 + startX1) / 2f
                                 val dy = (y0 + y1) / 2f - (startY0 + startY1) / 2f
                                 val ratio = span / startSpan
-                                val spanShrink = startSpan - span
-                                if (gestureMode == 0 && ratio <= 0.75f && spanShrink > hypot(dx, dy)) {
-                                    gestureMode = 3
-                                    currentOnPinchIn()
-                                } else if (gestureMode == 0 && ratio > 1.15f) {
+                                val spanDelta = abs(span - startSpan)
+                                if (hypot(dx, dy) > tapSlop || spanDelta > tapSlop) {
+                                    cancelLongPress()
+                                }
+                                // Pinch in/out: leave both directions to WebView zoom.
+                                if (ratio > 1.15f || ratio < 0.85f) {
                                     swipeIsPinch = true
-                                } else if (gestureMode == 0 && ratio >= 0.85f) {
+                                    cancelLongPress()
+                                } else {
                                     val horizontal = abs(dx) >= swipeSlop && abs(dx) > abs(dy) * 1.5f
                                     val swipeDown = dy >= swipeSlop && dy > abs(dx) * 1.5f
+                                    val swipeUp = dy <= -swipeSlop && abs(dy) > abs(dx) * 1.5f
                                     if (horizontal) {
                                         gestureMode = 1
+                                        shellGestureFired = true
+                                        cancelLongPress()
                                         currentOnShowSwitcher()
                                     } else if (swipeDown) {
                                         gestureMode = 2
+                                        shellGestureFired = true
+                                        cancelLongPress()
                                         currentOnTwoFingerSwipeDown()
+                                    } else if (swipeUp) {
+                                        gestureMode = 3
+                                        shellGestureFired = true
+                                        cancelLongPress()
+                                        (view as? WebView)?.reload()
+                                        currentOnTwoFingerSwipeUp()
                                     }
                                 }
                             }
@@ -319,18 +369,35 @@ fun AppWebView(
                         MotionEvent.ACTION_POINTER_UP -> {
                             if (event.pointerCount <= 2) {
                                 trackingSwipe = false
-                                swipeIsPinch = false
+                                cancelLongPress()
+                                // Non-pinch multitouch: eat the rest of this stream so the
+                                // primary finger cannot finish as a page click/drag.
+                                if (multiTouchSession && !swipeIsPinch) {
+                                    suppressUntilUp = true
+                                }
                                 gestureMode = 0
                             }
                         }
                         MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            cancelLongPress()
                             trackingSwipe = false
-                            swipeIsPinch = false
                             gestureMode = 0
+                            shellGestureFired = false
+                            val suppressClick =
+                                event.actionMasked == MotionEvent.ACTION_UP &&
+                                    (suppressUntilUp || (multiTouchSession && !swipeIsPinch))
+                            multiTouchSession = false
+                            swipeIsPinch = false
+                            suppressUntilUp = false
+                            val blockPage = !currentTouchEnabled
+                            return@setOnTouchListener suppressClick || blockPage
                         }
                     }
                     val blockPage = !currentTouchEnabled
-                    gestureMode != 0 || blockPage
+                    // After a shell gesture fires, keep consuming until fingers lift.
+                    // Forward undecided/pinch moves so zoom still works; once a non-pinch
+                    // multitouch lift starts, swallow the remainder to prevent page clicks.
+                    gestureMode != 0 || shellGestureFired || blockPage || suppressUntilUp
                 }
                 
                 tag = url
