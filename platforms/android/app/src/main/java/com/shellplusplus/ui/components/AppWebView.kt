@@ -279,18 +279,33 @@ fun AppWebView(
                 var startX1 = 0f
                 var startY1 = 0f
                 var startSpan = 1f
+                var fingerDownX = 0f
+                var fingerDownY = 0f
                 var longPressArmed = false
+                var singleFingerDown = false
+                fun cancelPageLongPress() {
+                    val now = android.os.SystemClock.uptimeMillis()
+                    val cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
+                    onTouchEvent(cancel)
+                    cancel.recycle()
+                }
                 val longPressRunnable = Runnable {
-                    if (longPressArmed && multiTouchSession && !swipeIsPinch && !shellGestureFired) {
+                    if (!longPressArmed || shellGestureFired) return@Runnable
+                    if (multiTouchSession && !swipeIsPinch) {
                         longPressArmed = false
                         shellGestureFired = true
                         gestureMode = 4
                         suppressUntilUp = true
                         currentOnTwoFingerLongPress()
-                        val now = android.os.SystemClock.uptimeMillis()
-                        val cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
-                        this.onTouchEvent(cancel)
-                        cancel.recycle()
+                        cancelPageLongPress()
+                    } else if (singleFingerDown && !multiTouchSession) {
+                        longPressArmed = false
+                        singleFingerDown = false
+                        shellGestureFired = true
+                        gestureMode = 5
+                        suppressUntilUp = true
+                        currentOnShowSwitcher()
+                        cancelPageLongPress()
                     }
                 }
                 fun cancelLongPress() {
@@ -299,6 +314,19 @@ fun AppWebView(
                 }
                 setOnTouchListener { view, event ->
                     when (event.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            if (event.pointerCount == 1) {
+                                fingerDownX = event.x
+                                fingerDownY = event.y
+                                singleFingerDown = true
+                                shellGestureFired = false
+                                gestureMode = 0
+                                suppressUntilUp = false
+                                longPressArmed = true
+                                gestureHandler.removeCallbacks(longPressRunnable)
+                                gestureHandler.postDelayed(longPressRunnable, longPressTimeoutMs)
+                            }
+                        }
                         MotionEvent.ACTION_POINTER_DOWN -> {
                             if (event.pointerCount == 2) {
                                 currentOnTwoFingerTouch()
@@ -317,12 +345,19 @@ fun AppWebView(
                                 gestureHandler.removeCallbacks(longPressRunnable)
                                 gestureHandler.postDelayed(longPressRunnable, longPressTimeoutMs)
                             } else {
+                                singleFingerDown = false
                                 trackingSwipe = false
                                 swipeIsPinch = true
                                 cancelLongPress()
                             }
                         }
                         MotionEvent.ACTION_MOVE -> {
+                            if (singleFingerDown && event.pointerCount == 1 && gestureMode == 0) {
+                                if (hypot(event.x - fingerDownX, event.y - fingerDownY) > tapSlop) {
+                                    singleFingerDown = false
+                                    cancelLongPress()
+                                }
+                            }
                             if (trackingSwipe && !swipeIsPinch && event.pointerCount == 2 && gestureMode == 0) {
                                 val x0 = event.getX(0)
                                 val y0 = event.getY(0)
@@ -336,31 +371,33 @@ fun AppWebView(
                                 if (hypot(dx, dy) > tapSlop || spanDelta > tapSlop) {
                                     cancelLongPress()
                                 }
-                                // Pinch in/out: leave both directions to WebView zoom.
-                                if (ratio > 1.15f || ratio < 0.85f) {
+                                val horizontal = abs(dx) >= swipeSlop && abs(dx) > abs(dy) * 1.2f
+                                val swipeDown = dy >= swipeSlop && dy > abs(dx) * 1.2f
+                                val swipeUp = dy <= -swipeSlop && abs(dy) > abs(dx) * 1.2f
+                                // A real swipe wins even if the fingers drift apart a little.
+                                // Only an early, mostly in-place pinch is left to WebView zoom.
+                                val pinch = !horizontal && !swipeDown && !swipeUp &&
+                                    (ratio > 1.35f || ratio < 0.7f) &&
+                                    spanDelta > hypot(dx, dy)
+                                if (pinch) {
                                     swipeIsPinch = true
                                     cancelLongPress()
-                                } else {
-                                    val horizontal = abs(dx) >= swipeSlop && abs(dx) > abs(dy) * 1.5f
-                                    val swipeDown = dy >= swipeSlop && dy > abs(dx) * 1.5f
-                                    val swipeUp = dy <= -swipeSlop && abs(dy) > abs(dx) * 1.5f
-                                    if (horizontal) {
-                                        gestureMode = 1
-                                        shellGestureFired = true
-                                        cancelLongPress()
-                                        currentOnShowSwitcher()
-                                    } else if (swipeDown) {
-                                        gestureMode = 2
-                                        shellGestureFired = true
-                                        cancelLongPress()
-                                        currentOnTwoFingerSwipeDown()
-                                    } else if (swipeUp) {
-                                        gestureMode = 3
-                                        shellGestureFired = true
-                                        cancelLongPress()
-                                        (view as? WebView)?.reload()
-                                        currentOnTwoFingerSwipeUp()
-                                    }
+                                } else if (horizontal) {
+                                    gestureMode = 1
+                                    shellGestureFired = true
+                                    cancelLongPress()
+                                    currentOnShowSwitcher()
+                                } else if (swipeDown) {
+                                    gestureMode = 2
+                                    shellGestureFired = true
+                                    cancelLongPress()
+                                    currentOnTwoFingerSwipeDown()
+                                } else if (swipeUp) {
+                                    gestureMode = 3
+                                    shellGestureFired = true
+                                    cancelLongPress()
+                                    (view as? WebView)?.reload()
+                                    currentOnTwoFingerSwipeUp()
                                 }
                             }
                         }
@@ -380,6 +417,7 @@ fun AppWebView(
                         }
                         MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                             cancelLongPress()
+                            singleFingerDown = false
                             trackingSwipe = false
                             gestureMode = 0
                             shellGestureFired = false

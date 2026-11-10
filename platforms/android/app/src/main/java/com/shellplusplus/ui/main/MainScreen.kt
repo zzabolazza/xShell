@@ -32,10 +32,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
-import kotlin.math.abs
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -135,49 +133,6 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .pointerInput(Unit) {
-                    val swipeSlop = 80.dp.toPx()
-                    var tracking = false
-                    var fired = false
-                    var startX = 0f
-                    var startY = 0f
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            val pressed = event.changes.filter { it.pressed }
-                            if (pressed.size >= 2) {
-                                if (!tracking) {
-                                    showTopBar()
-                                    val first = pressed[0].position
-                                    val second = pressed[1].position
-                                    startX = (first.x + second.x) / 2f
-                                    startY = (first.y + second.y) / 2f
-                                    tracking = true
-                                    fired = false
-                                } else if (!fired && event.type == PointerEventType.Move) {
-                                    val first = pressed[0].position
-                                    val second = pressed[1].position
-                                    val dx = (first.x + second.x) / 2f - startX
-                                    val dy = (first.y + second.y) / 2f - startY
-                                    if (abs(dx) >= swipeSlop && abs(dx) > abs(dy) * 1.5f) {
-                                        fired = true
-                                        val appsNow = openedAppsState.value
-                                        if (appsNow.size > 1 && !switcherOpenState.value) {
-                                            val current = appsNow.indexOfFirst {
-                                                it.packageName == selectedPackageState.value
-                                            }.coerceAtLeast(0)
-                                            switcherIndex = current
-                                            displayedSwitcherIndex = current
-                                        }
-                                    }
-                                }
-                            } else {
-                                tracking = false
-                                fired = false
-                            }
-                        }
-                    }
-                }
         ) {
             if (selectedApp != null) {
                 openedApps.forEach { app ->
@@ -236,6 +191,20 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .zIndex(2f)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    val appsNow = openedAppsState.value
+                                    if (appsNow.size > 1 && !switcherOpenState.value) {
+                                        val current = appsNow.indexOfFirst {
+                                            it.packageName == selectedPackageState.value
+                                        }.coerceAtLeast(0)
+                                        switcherIndex = current
+                                        displayedSwitcherIndex = current
+                                    }
+                                }
+                            )
+                        }
                 )
             }
             AnimatedVisibility(
