@@ -3,7 +3,7 @@
 
 // Cmd+Tab 显示的是正在运行的 .app 里的可执行文件名。
 // 开发态直接跑 Electron.app 时，这个名字固定是 Electron，改菜单栏标题不会影响它。
-// 这里克隆一份 Shell++.app，并把可执行文件改名为 Shell++。
+// 这里克隆一份 xShell.app，并把可执行文件改名为 xShell。
 
 const { execFileSync } = require('child_process');
 const crypto = require('crypto');
@@ -11,7 +11,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const APP_NAME = 'Shell++';
+const APP_NAME = 'xShell';
 const BUNDLE_ID = 'com.shellplusplus.app';
 const CONTENT_RATIO = 824 / 1024;
 

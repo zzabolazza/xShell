@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "正在启动 Shell++ Website 开发服务器..."
+echo "正在启动 xShell Website 开发服务器..."
 echo
 
 # 检查是否已安装依赖

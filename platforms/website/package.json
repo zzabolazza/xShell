@@ -1,7 +1,7 @@
 {
   "name": "shellplusplus-website",
   "version": "1.0.0",
-  "description": "Shell++ Homepage - 一个简单的应用启动器主页",
+  "description": "xShell Homepage - 一个简单的应用启动器主页",
   "main": "index.js",
   "homepage": "https://your-domain.vercel.app",
   "scripts": {
@@ -34,6 +34,6 @@
     "vercel",
     "ai-apps"
   ],
-  "author": "Shell++ Team",
+  "author": "xShell Team",
   "license": "MIT"
 }

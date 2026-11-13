@@ -1,6 +1,6 @@
-# Shell++ Website
+# xShell Website
 
-这是 Shell++ 项目的官方网站，提供了一个专业的 AI 应用启动器主页。
+这是 xShell 项目的官方网站，提供了一个专业的 AI 应用启动器主页。
 
 ## 功能特性
 

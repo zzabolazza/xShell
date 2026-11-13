@@ -1,6 +1,6 @@
 {
-  "name": "Shell++",
-  "short_name": "Shell++",
+  "name": "xShell",
+  "short_name": "xShell",
   "description": "AI 应用启动器 - 你的智能助手集合",
   "start_url": "/",
   "display": "standalone",

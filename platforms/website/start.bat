@@ -1,5 +1,5 @@
 @echo off
-echo 正在启动 Shell++ Website 开发服务器...
+echo 正在启动 xShell Website 开发服务器...
 echo.
 
 REM 检查是否已安装依赖

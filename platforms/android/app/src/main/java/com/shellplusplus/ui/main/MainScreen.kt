@@ -97,9 +97,9 @@ fun MainScreen(
                         title = {
                             Text(
                                 text = if (browsing) {
-                                    currentPageTitle ?: selectedApp?.name ?: "Shell++"
+                                    currentPageTitle ?: selectedApp?.name ?: "XSHELL"
                                 } else {
-                                    "Shell++"
+                                    "XSHELL"
                                 },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis

@@ -5,7 +5,8 @@ const electronLog = require('electron-log');
 
 // 只影响 Electron 内部名称（关于、Quit 文案）。菜单栏上苹果图标旁的名字来自
 // Electron.app 的 Info.plist，由 scripts/prepare-macos-dev.js 在启动前写入。
-app.setName('Shell++');
+app.setPath('userData', path.join(app.getPath('appData'), 'Shell++'));
+app.setName('xShell');
 
 // 导入自定义模块
 const AppManager = require('./appManager');

@@ -6,6 +6,10 @@ plugins {
     id 'com.google.dagger.hilt.android'
 }
 
+base {
+    archivesName = "xShell"
+}
+
 android {
     namespace 'com.shellplusplus'
     compileSdk 34

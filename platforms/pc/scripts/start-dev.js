@@ -6,7 +6,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const command = process.platform === 'darwin'
-  ? path.join(root, '.dev-app/Shell++.app/Contents/MacOS/Shell++')
+  ? path.join(root, '.dev-app/xShell.app/Contents/MacOS/xShell')
   : path.join(root, 'node_modules/.bin/electron');
 
 const child = spawn(command, ['.'], {

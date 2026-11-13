@@ -62,7 +62,7 @@ class WindowManager {
         contextIsolation: true,
         sandbox: true
       },
-      title: 'Shell++',
+      title: 'xShell',
       frame: true, // 使用系统标准窗口框架
       icon: path.join(__dirname, '../assets/icons/icon.png'),
       backgroundColor: '#f5f5f5' // 设置主窗口背景色，与main.html的body背景色一致

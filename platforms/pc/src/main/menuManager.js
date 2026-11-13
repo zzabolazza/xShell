@@ -49,7 +49,7 @@ class MenuManager {
           { role: 'hideOthers' },
           { role: 'unhide' },
           { type: 'separator' },
-          { label: 'Quit Shell++', role: 'quit' }
+          { label: 'Quit xShell', role: 'quit' }
         ]
       });
     } else {
@@ -57,7 +57,7 @@ class MenuManager {
         label: 'File',
         submenu: [
           {
-            label: 'Quit Shell++',
+            label: 'Quit xShell',
             accelerator: 'Ctrl+Q',
             role: 'quit'
           }

@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Shell++',
+  title: 'xShell - App Workspace',
   description: '一个简单的应用启动器主页',
   icons: {
     icon: [

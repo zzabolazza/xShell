@@ -1,4 +1,4 @@
-# ShellPlusPlus
+# xShell
 
 一个跨平台的Shell增强工具，支持Android和PC平台。
 
@@ -94,7 +94,7 @@ cd platforms/android
 .\gradlew clean build
 
 # 使用adb直接安装（推荐）
-D:\Android\SDK\platform-tools\adb.exe install app\build\outputs\apk\debug\app-debug.apk
+D:\Android\SDK\platform-tools\adb.exe install app\build\outputs\apk\debug\xShell-debug.apk
 ```
 
 #### 6. 检查设备连接
