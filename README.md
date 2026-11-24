@@ -141,6 +141,31 @@ npm install
 npm start
 ```
 
+## 安装到 xLauncher
+
+将桌面应用安装到 `~/.xTools/bin`，供 [xLauncher](../xLauncher) 发现并启动：
+
+```bash
+cd xShell   # 或在 monorepo 根目录：make -C xShell install
+make install
+```
+
+安装内容：
+
+- 可执行文件：`$(PREFIX)/bin/xShell`（默认 `PREFIX=~/.xTools`）
+- 说明 sidecar：`xShell.desc`（xLauncher 列表展示）
+- Electron 应用树：`$(PREFIX)/lib/xshell/pc`
+
+xLauncher 会设置 **`XSHELL_LISTEN_ADDR=127.0.0.1:<port>`**，启动器先在该地址提供一页状态页（标题 `xShell - AI box`），再拉起 Electron。手动运行示例：
+
+```bash
+XSHELL_LISTEN_ADDR=127.0.0.1:9001 ~/.xTools/bin/xShell
+# 或
+~/.xTools/bin/xShell -addr 127.0.0.1:9001
+```
+
+用户数据目录仍为平台约定的 **`Shell++`**（兼容路径，不迁移）。卸载：`make uninstall`。
+
 ## ICON生成
 ```shell
 npm run electron:generate-icons
